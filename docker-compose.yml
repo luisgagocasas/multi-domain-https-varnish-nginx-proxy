@@ -1,0 +1,67 @@
+version: '3.7'
+
+services:
+  proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+    networks:
+      vpcbr:
+        ipv4_address: 10.3.0.2
+
+  foo:
+    image: nginx
+    environment:
+      - VIRTUAL_HOST=foo.test
+    expose: 
+      - "80"
+    volumes:
+      - ./foo:/usr/share/nginx/html
+    networks:
+      vpcbr:
+        ipv4_address: 10.3.0.3
+
+  baz:
+    image: nginx
+    environment:
+      - VIRTUAL_HOST=baz.test
+    expose: 
+      - "80"
+    volumes:
+      - ./baz:/usr/share/nginx/html
+    networks:
+      vpcbr:
+        ipv4_address: 10.3.0.4
+
+  varnish-baz:
+    image: varnish
+    environment:
+      - VIRTUAL_HOST=cache-baz.test
+    restart: always
+    volumes:
+      - ./config/baz.vcl:/etc/varnish/default.vcl
+    networks:
+      vpcbr:
+        ipv4_address: 10.3.0.5
+
+  varnish-foo:
+    image: varnish
+    environment:
+      - VIRTUAL_HOST=cache-foo.test
+    restart: always
+    volumes:
+      - ./config/foo.vcl:/etc/varnish/default.vcl
+    networks:
+      vpcbr:
+        ipv4_address: 10.3.0.6
+
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.3.0.0/8
